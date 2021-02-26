@@ -1,0 +1,81 @@
+"""Create macro1 to run on all the files selected in a folder, run them one by one; replace #N/A and save. Macro 2 will have option to select two files and merge them into sheet 1 and sheet 2 with an option to save merged sheet name."""
+
+# Importing all the required libraries 
+import pandas as pd
+import numpy as np
+import pyreadstat
+from math import *
+import re
+import os
+# import savReaderWriter as spss
+# read all the data that have max range
+pd.set_option('display.max_colwidth', None)
+
+# Please enter number of variables in sheet 1 and 2
+mainPath = r"C:\Users\Ashish.tyagi\Downloads\TV\Tapan-Sir_25Feb2021"  # dont remove r write your path between "" r"___"
+noVarSheet1 = 15868 
+filter_var = "qlang"
+
+%%time
+# in this section i am doing multiple tasks
+
+# Checking all the excel SPSS and other files given path
+# mainPath = r"C:\Users\Ashish.tyagi\Downloads\TV\Tapan-Sir_25Feb2021"  # dont remove r write your path between "" r"___"
+# mainPath = r"C:\Users\Ashish.tyagi\Downloads\TV\Tapan-Sir_25Feb2021\ORD-571432-H9P3_CE+OE_SPSS(First)_17Feb.sav"  # dont remove r write your path between "" r"___"
+path, dirs, files = next(os.walk(mainPath))
+file_count = len(files)
+
+# print(path)
+# print(dirs)
+# print(files)
+
+# print(len(dirs))
+# print(len(files))
+# print(files[0].split(".")[-1] == "xlsx")
+
+
+for i in range(len(files)):  # this loop is running total number of files times if excel txt or spss
+    
+    if (files[i].split(".")[-1] == "sav" or files[i].split(".")[-1] == "SAV"):
+        filepath = path + "\\" + files[i]
+        filepath = filepath.replace("\\", "/")
+        df_2, meta_2 = pyreadstat.read_sav(filepath, disable_datetime_conversion=True)
+        print(df_2[filter_var].value_counts())
+        NumOfCountries = list(df_2[filter_var].value_counts().index)
+        print(NumOfCountries)
+        print(len(NumOfCountries))
+        print("*****************************************************")
+        print("data load successful..... that is on the path - " + filepath)
+        
+        for j in range(len(NumOfCountries)):
+            
+            Country_wise_df = df_2[df_2[filter_var] == NumOfCountries[j]]
+            if len(df_2.columns)%2 != 0:
+                sheet1DF = Country_wise_df.iloc[:,0:noVarSheet1]
+    #             sheet1DF['interview_start'] = pd.to_datetime(13657852800-sheet1DF['interview_start'], unit='s')
+    #             sheet1DF['interview_end'] = pd.to_datetime(13657852800-sheet1DF['interview_end'], unit='s')
+                start2cols = list(sheet1DF.columns)
+                sheet2DF = Country_wise_df.iloc[:,noVarSheet1:len(Country_wise_df.columns)+1]
+                sheet2DF.insert(0, start2cols[0], sheet1DF.iloc[:,0], True)
+                sheet2DF.insert(1, start2cols[1], sheet1DF.iloc[:,1], True)
+                sheet2DF.insert(2, "qlang", sheet1DF.loc[:,"qlang"], True)
+                outputFilepath = path + "\\new_" + str(j+1) + files[i].split(".")[-2] + ".xlsx"
+                outputFilepath = outputFilepath.replace("\\", "/")
+                with pd.ExcelWriter(outputFilepath) as writer:
+                    sheet1DF.to_excel(writer, index=False, sheet_name="sheet1")
+                    sheet2DF.to_excel(writer, index=False, sheet_name="sheet2")
+            else:
+                sheet1DF = Country_wise_df.iloc[:,0:noVarSheet1]
+                start2cols = list(sheet1DF.columns)
+                sheet2DF = Country_wise_df.iloc[:,noVarSheet1:len(Country_wise_df.columns)+1]
+                sheet2DF.insert(0, start2cols[0], sheet1DF.iloc[:,0], True)
+                sheet2DF.insert(1, start2cols[1], sheet1DF.iloc[:,1], True)
+                sheet2DF.insert(2, "qlang", sheet1DF.loc[:,"qlang"], True)
+                outputFilepath = path + "\\new_" + str(j+1) + files[i].split(".")[-2] + ".xlsx"
+                outputFilepath = outputFilepath.replace("\\", "/")
+                with pd.ExcelWriter(outputFilepath) as writer:
+                    sheet1DF.to_excel(writer, index=False, sheet_name="sheet1" )
+                    sheet2DF.to_excel(writer, index=False, sheet_name="sheet2")
+            print("---------------------------------------------------")
+            print("File saved successful on the path - " + outputFilepath)
+            
